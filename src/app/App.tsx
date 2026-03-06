@@ -8,6 +8,7 @@ import TicketsPage from "./pages/Tickets";
 import TicketDetailPage from "./pages/TicketDetail";
 import AdminPage from "./pages/Admin";
 import MePage from "./pages/Me";
+import AccessesPage from "./pages/Accesses";
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
                   <Route path="/tickets" element={<TicketsPage />} />
                   <Route path="/tickets/:id" element={<TicketDetailPage />} />
                   <Route path="/admin" element={<AdminPage />} />
+                  <Route path="/accesses" element={<AccessesPage />} />
                   <Route path="/me" element={<MePage />} />
                   <Route path="*" element={<div className="card">Página não encontrada.</div>} />
                 </Routes>
