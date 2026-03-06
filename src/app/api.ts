@@ -34,7 +34,21 @@ export async function changePassword(old_password: string, new_password: string)
   return apiFetch<{ ok: boolean }>("/auth/change-password", { method: "POST", body: JSON.stringify({ old_password, new_password }) });
 }
 
-export type Store = { id: string; name: string; cnpj: string; };
+export type Store = { id: string; name: string; cnpj: string; active?: boolean; network_id?: string | null; };
+export type Network = { id: string; name: string; active: boolean; };
+
+
+export type AnyDeskAccess = {
+  id: string;
+  store_id: string;
+  store_name?: string | null;
+  label: string;
+  anydesk_id: string;
+  notes?: string | null;
+  active: boolean;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
 export type TicketStatus = "ABERTO" | "ATRIBUIDO" | "EM_ATENDIMENTO" | "PENDENTE" | "CONCLUIDO";
 export type Ticket = {
   id: string; store_id: string; store_name?: string;
@@ -47,11 +61,21 @@ export type Ticket = {
 };
 export type TicketUpdate = { id: string; ticket_id: string; action: string; message?: string | null; created_at?: string; actor?: string | null; };
 
-export async function listStores() { return apiFetch<Store[]>("/stores/", { method: "GET" }); }
-export async function listTickets(params?: { status?: string; mine?: boolean }) {
+export async function listStores(params?: { network_id?: string }) {
+  const qs = new URLSearchParams();
+  if (params?.network_id) qs.set("network_id", params.network_id);
+  const q = qs.toString() ? `?${qs.toString()}` : "";
+  return apiFetch<Store[]>(`/stores/${q}`, { method: "GET" });
+}
+export async function listNetworks() { return apiFetch<Network[]>("/networks/", { method: "GET" }); }
+export async function listTickets(params?: { status?: string; mine?: boolean; network_id?: string; store_id?: string; open_only?: boolean; mine_only?: boolean }) {
   const qs = new URLSearchParams();
   if (params?.status) qs.set("status", params.status);
   if (params?.mine) qs.set("mine", "true");
+  if (params?.network_id) qs.set("network_id", params.network_id);
+  if (params?.store_id) qs.set("store_id", params.store_id);
+  if (params?.open_only) qs.set("open_only", "true");
+  if (params?.mine_only) qs.set("mine_only", "true");
   const q = qs.toString() ? `?${qs.toString()}` : "";
   return apiFetch<Ticket[]>(`/tickets/${q}`, { method: "GET" });
 }
@@ -74,3 +98,21 @@ export async function adminCreateUser(input: CreateUserInput) { return apiFetch<
 export async function adminListStores() { return apiFetch<any[]>("/admin/stores", { method: "GET" }); }
 export async function adminCreateStore(input: { name: string; cnpj: string }) { return apiFetch<any>("/admin/stores", { method: "POST", body: JSON.stringify(input) }); }
 export async function adminGrantStore(client_id: string, store_id: string) { return apiFetch<any>(`/admin/clients/${client_id}/stores/${store_id}`, { method: "POST" }); }
+
+
+export async function adminListAnyDeskAccesses(params?: { q?: string; store_id?: string }) {
+  const qs = new URLSearchParams();
+  if (params?.q) qs.set("q", params.q);
+  if (params?.store_id) qs.set("store_id", params.store_id);
+  const q = qs.toString() ? `?${qs.toString()}` : "";
+  return apiFetch<AnyDeskAccess[]>(`/accesses/${q}`, { method: "GET" });
+}
+export async function adminCreateAnyDeskAccess(input: { store_id: string; label: string; anydesk_id: string; notes?: string; active?: boolean }) {
+  return apiFetch<AnyDeskAccess>("/accesses/", { method: "POST", body: JSON.stringify(input) });
+}
+export async function adminUpdateAnyDeskAccess(access_id: string, input: { store_id?: string; label?: string; anydesk_id?: string; notes?: string; active?: boolean }) {
+  return apiFetch<AnyDeskAccess>(`/accesses/${access_id}`, { method: "PATCH", body: JSON.stringify(input) });
+}
+export async function adminDeleteAnyDeskAccess(access_id: string) {
+  return apiFetch<{ ok: boolean }>(`/accesses/${access_id}`, { method: "DELETE" });
+}
