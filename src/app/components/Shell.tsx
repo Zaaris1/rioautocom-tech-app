@@ -30,6 +30,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
           <nav className="nav" style={{ display:"grid", gap:6 }}>
             <NavItem to="/tickets" label="Tickets" />
             {role === "ADMIN" && <NavItem to="/admin" label="Admin" />}
+            {role === "ADMIN" && <NavItem to="/accesses" label="Acessos" />}
             <NavItem to="/me" label="Minha conta" />
           </nav>
 
