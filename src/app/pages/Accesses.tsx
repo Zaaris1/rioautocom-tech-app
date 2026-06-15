@@ -32,6 +32,15 @@ function normalizeAnyDeskId(value: string) {
   return value.replace(/\D+/g, "");
 }
 
+function normalizeDigits(value: string) {
+  return String(value || "").replace(/\D+/g, "");
+}
+
+function formatStoreOption(store: StoreOption) {
+  const cnpj = store.cnpj ? ` • CNPJ ${store.cnpj}` : "";
+  return `${store.name}${cnpj}`;
+}
+
 export default function AccessesPage() {
   const { role } = useAuth();
   const { show, Toast } = useToast();
@@ -49,7 +58,10 @@ export default function AccessesPage() {
     try {
       const [storesData, accessesData] = await Promise.all([
         adminListStores(),
-        adminListAnyDeskAccesses({ q: query.trim() || undefined, store_id: storeFilter || undefined }),
+        adminListAnyDeskAccesses({
+          q: normalizeDigits(query) || query.trim() || undefined,
+          store_id: storeFilter || undefined,
+        }),
       ]);
       setStores(storesData);
       setItems(accessesData);
@@ -173,7 +185,7 @@ export default function AccessesPage() {
             <select value={form.store_id} onChange={(e) => setForm({ ...form, store_id: e.target.value })}>
               <option value="">Selecione...</option>
               {stores.map((store) => (
-                <option key={store.id} value={store.id}>{store.name}</option>
+                <option key={store.id} value={store.id}>{formatStoreOption(store)}</option>
               ))}
             </select>
           </div>
@@ -215,14 +227,14 @@ export default function AccessesPage() {
         <div className="grid">
           <div className="col-7">
             <label>Pesquisar</label>
-            <input className="input" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Loja, etiqueta, ID ou observação" />
+            <input className="input" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Loja, CNPJ, etiqueta, ID ou observação" />
           </div>
           <div className="col-5">
             <label>Filtrar por loja</label>
             <select value={storeFilter} onChange={(e) => setStoreFilter(e.target.value)}>
               <option value="">Todas</option>
               {stores.map((store) => (
-                <option key={store.id} value={store.id}>{store.name}</option>
+                <option key={store.id} value={store.id}>{formatStoreOption(store)}</option>
               ))}
             </select>
           </div>
