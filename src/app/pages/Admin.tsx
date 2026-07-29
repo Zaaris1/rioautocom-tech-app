@@ -1,5 +1,15 @@
 import React from "react";
-import { adminCreateStore, adminCreateUser, adminGrantStore, adminListStores, adminListUsers } from "../api";
+import {
+  adminCreateNetwork,
+  adminCreateStore,
+  adminCreateUser,
+  adminGrantStore,
+  adminListNetworks,
+  adminListStores,
+  adminListUsers,
+  adminUpdateNetwork,
+  Network,
+} from "../api";
 import { useAuth } from "../auth";
 import { useToast } from "../components/Toast";
 
@@ -9,17 +19,22 @@ export default function AdminPage() {
 
   const [users, setUsers] = React.useState<any[]>([]);
   const [stores, setStores] = React.useState<any[]>([]);
+  const [networks, setNetworks] = React.useState<Network[]>([]);
   const [loading, setLoading] = React.useState(false);
+  const [savingNetwork, setSavingNetwork] = React.useState(false);
 
   const [newUser, setNewUser] = React.useState({ username:"", role:"TECH", password:"", must_change_password:true });
   const [newStore, setNewStore] = React.useState({ name:"", cnpj:"" });
+  const [newNetworkName, setNewNetworkName] = React.useState("");
+  const [editingNetwork, setEditingNetwork] = React.useState<Network | null>(null);
   const [grant, setGrant] = React.useState({ client_id:"", store_id:"" });
 
   const load = async () => {
     setLoading(true);
     try {
-      const [u, s] = await Promise.all([adminListUsers(), adminListStores()]);
+      const [u, s, n] = await Promise.all([adminListUsers(), adminListStores(), adminListNetworks()]);
       setUsers(u); setStores(s);
+      setNetworks([...n].sort((a, b) => a.name.localeCompare(b.name)));
     } catch (err:any) {
       show(err?.message || "Erro ao carregar admin", "error");
     } finally { setLoading(false); }
@@ -55,6 +70,36 @@ export default function AdminPage() {
   const doGrant = async () => {
     try { await adminGrantStore(grant.client_id.trim(), grant.store_id.trim()); show("Acesso liberado!", "success"); }
     catch (err:any) { show(err?.message || "Erro ao liberar acesso", "error"); }
+  };
+
+  const createNetwork = async () => {
+    const name = newNetworkName.trim();
+    if (!name) return;
+    setSavingNetwork(true);
+    try {
+      await adminCreateNetwork({ name });
+      setNewNetworkName("");
+      show("Rede criada!", "success");
+      await load();
+    } catch (err:any) { show(err?.message || "Erro ao criar rede", "error"); }
+    finally { setSavingNetwork(false); }
+  };
+
+  const saveNetwork = async () => {
+    if (!editingNetwork) return;
+    const name = editingNetwork.name.trim();
+    if (!name) {
+      show("Informe o nome da rede.", "error");
+      return;
+    }
+    setSavingNetwork(true);
+    try {
+      await adminUpdateNetwork(editingNetwork.id, { name, active: editingNetwork.active });
+      setEditingNetwork(null);
+      show("Rede atualizada!", "success");
+      await load();
+    } catch (err:any) { show(err?.message || "Erro ao atualizar rede", "error"); }
+    finally { setSavingNetwork(false); }
   };
 
   return (
@@ -110,6 +155,74 @@ export default function AdminPage() {
           </div>
           <div className="col-12">
             <button className="btn primary" onClick={createStore} disabled={!newStore.name || !newStore.cnpj}>Criar</button>
+          </div>
+        </div>
+      </div>
+
+      <div className="col-12 card">
+        <div className="row" style={{ justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
+          <div>
+            <div className="h2">Redes de lojas</div>
+            <div className="small">Crie, renomeie ou desative redes sem alterar as lojas vinculadas.</div>
+          </div>
+          {editingNetwork && <span className="badge">Editando rede</span>}
+        </div>
+        <div className="grid" style={{ marginTop:12 }}>
+          <div className="col-4">
+            <label>Nova rede</label>
+            <input
+              className="input"
+              value={newNetworkName}
+              onChange={(e) => setNewNetworkName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") createNetwork(); }}
+              placeholder="Ex.: Rede Centro"
+            />
+            <button className="btn primary" style={{ marginTop:10 }} onClick={createNetwork} disabled={savingNetwork || !newNetworkName.trim()}>
+              Criar rede
+            </button>
+          </div>
+
+          <div className="col-8">
+            {editingNetwork ? (
+              <div className="card" style={{ padding:12, background:"rgba(0,0,0,0.18)" }}>
+                <div className="h2">Editar rede</div>
+                <div className="grid">
+                  <div className="col-8">
+                    <label>Nome da rede</label>
+                    <input className="input" value={editingNetwork.name} onChange={(e) => setEditingNetwork({ ...editingNetwork, name:e.target.value })} />
+                  </div>
+                  <div className="col-4">
+                    <label>Status</label>
+                    <select value={editingNetwork.active ? "true" : "false"} onChange={(e) => setEditingNetwork({ ...editingNetwork, active:e.target.value === "true" })}>
+                      <option value="true">Ativa</option>
+                      <option value="false">Inativa</option>
+                    </select>
+                  </div>
+                  <div className="col-12 row" style={{ justifyContent:"flex-end" }}>
+                    <button className="btn" onClick={() => setEditingNetwork(null)} disabled={savingNetwork}>Cancelar</button>
+                    <button className="btn primary" onClick={saveNetwork} disabled={savingNetwork || !editingNetwork.name.trim()}>
+                      {savingNetwork ? "Salvando..." : "Salvar alterações"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : networks.length === 0 ? (
+              <div className="small">Nenhuma rede cadastrada.</div>
+            ) : (
+              <div style={{ display:"grid", gap:8 }}>
+                {networks.map((network) => (
+                  <div key={network.id} className="card" style={{ padding:12, background:"rgba(0,0,0,0.18)" }}>
+                    <div className="row" style={{ justifyContent:"space-between", gap:10, flexWrap:"wrap" }}>
+                      <div>
+                        <div style={{ fontWeight:800 }}>{network.name}</div>
+                        <div className="small">{network.active ? "Rede ativa" : "Rede inativa"}</div>
+                      </div>
+                      <button className="btn" onClick={() => setEditingNetwork({ ...network })}>Editar</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

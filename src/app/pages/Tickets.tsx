@@ -13,12 +13,13 @@ function statusBadge(s: string) {
 }
 
 export default function TicketsPage() {
-  const { role } = useAuth();
+  const { role, auth } = useAuth();
   const { show, Toast } = useToast();
 
   const isAdmin = role === "ADMIN";
 
   const [loading, setLoading] = React.useState(true);
+  const [exporting, setExporting] = React.useState(false);
   const [tickets, setTickets] = React.useState<Ticket[]>([]);
 
   const [status, setStatus] = React.useState("");
@@ -111,6 +112,33 @@ export default function TicketsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storeId, status, hideConcluded]);
 
+  const exportPdf = async () => {
+    if (!tickets.length) {
+      show("Não há ordens de serviço para exportar.", "error");
+      return;
+    }
+
+    setExporting(true);
+    try {
+      const { exportTicketsToPdf } = await import("../utils/ticketsPdf");
+      exportTicketsToPdf({
+        tickets,
+        filters: {
+          networkName: networks.find((network) => network.id === networkId)?.name,
+          storeName: stores.find((store) => store.id === storeId)?.name,
+          status: status || undefined,
+          hideConcluded,
+        },
+        generatedBy: auth?.username || role || undefined,
+      });
+      show("PDF gerado com as ordens pesquisadas.", "success");
+    } catch (err: any) {
+      show(err?.message || "Não foi possível gerar o PDF.", "error");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="grid">
       <div className="col-12 card">
@@ -183,6 +211,9 @@ export default function TicketsPage() {
 
             <button className="btn" onClick={loadTickets} disabled={loading}>
               {loading ? "Atualizando..." : "Atualizar"}
+            </button>
+            <button className="btn primary" onClick={exportPdf} disabled={loading || exporting || tickets.length === 0}>
+              {exporting ? "Gerando PDF..." : "Exportar PDF"}
             </button>
           </div>
         </div>

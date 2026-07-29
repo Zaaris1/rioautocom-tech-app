@@ -36,6 +36,7 @@ export async function changePassword(old_password: string, new_password: string)
 
 export type Store = { id: string; name: string; cnpj: string; active?: boolean; network_id?: string | null; };
 export type Network = { id: string; name: string; active: boolean; };
+export type NetworkUpdateInput = { name?: string; active?: boolean; };
 
 
 export type AnyDeskAccess = {
@@ -57,7 +58,7 @@ export type Ticket = {
   priority: "NORMAL" | "URGENTE";
   status: TicketStatus;
   assigned_to?: string | null;
-  created_at?: string; updated_at?: string;
+  created_at?: string; opened_at?: string; updated_at?: string;
 };
 export type TicketUpdate = { id: string; ticket_id: string; action: string; message?: string | null; created_at?: string; actor?: string | null; };
 
@@ -98,6 +99,11 @@ export async function adminCreateUser(input: CreateUserInput) { return apiFetch<
 export async function adminListStores() { return apiFetch<any[]>("/admin/stores", { method: "GET" }); }
 export async function adminCreateStore(input: { name: string; cnpj: string }) { return apiFetch<any>("/admin/stores", { method: "POST", body: JSON.stringify(input) }); }
 export async function adminGrantStore(client_id: string, store_id: string) { return apiFetch<any>(`/admin/clients/${client_id}/stores/${store_id}`, { method: "POST" }); }
+export async function adminListNetworks() { return apiFetch<Network[]>("/admin/networks", { method: "GET" }); }
+export async function adminCreateNetwork(input: { name: string }) { return apiFetch<Network>("/admin/networks", { method: "POST", body: JSON.stringify(input) }); }
+export async function adminUpdateNetwork(networkId: string, input: NetworkUpdateInput) {
+  return apiFetch<Network>(`/admin/networks/${networkId}`, { method: "PATCH", body: JSON.stringify(input) });
+}
 
 
 export async function adminListAnyDeskAccesses(params?: { q?: string; store_id?: string }) {
